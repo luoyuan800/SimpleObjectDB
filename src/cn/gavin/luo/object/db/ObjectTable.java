@@ -24,6 +24,9 @@ public class ObjectTable<T extends Serializable> {
 
     public ObjectTable(Class<T> table, File root) {
         this.root = new File(root, table.getName());
+        if(!this.root.exists()){
+            this.root.mkdirs();
+        }
         this.table = table;
         cache = new HashMap<>();
     }
@@ -44,6 +47,7 @@ public class ObjectTable<T extends Serializable> {
             file.delete();
         }
         saveObject(object, file);
+        cache.put(id, new SoftReference<T>(object));
         return id;
     }
 
@@ -104,11 +108,15 @@ public class ObjectTable<T extends Serializable> {
                 T t = ref.get();
                 if (t != null) {
                     if (t instanceof IDObject) {
-                        save(t, ((IDObject) t).getId());
+                        update(t, ((IDObject) t).getId());
                     }
                 }
             }
         }
+    }
+
+    public void close(){
+        cache.clear();
     }
 
     private void saveObject(T object, File entry) {
@@ -118,12 +126,13 @@ public class ObjectTable<T extends Serializable> {
             oos.flush();
             oos.close();
         } catch (IOException e) {
+            e.printStackTrace();
             //LogHelper.logException(e,"ObjectDb->save{" + object + ", " + id + "}");
         }
     }
 
     private String getName(String id) {
-        return table.getName() + "@" + id;
+        return id;
     }
 
     private T load(String id) {
